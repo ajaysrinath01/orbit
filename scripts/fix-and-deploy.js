@@ -1,9 +1,11 @@
 import { execSync } from "child_process";
 
+const cwd = "/vercel/share/v0-project";
+
 function run(cmd) {
   console.log(`> ${cmd}`);
   try {
-    const output = execSync(cmd, { cwd: "/vercel/share/v0-project", encoding: "utf-8", stdio: "pipe" });
+    const output = execSync(cmd, { cwd, encoding: "utf-8", stdio: "pipe" });
     if (output.trim()) console.log(output.trim());
     return output;
   } catch (e) {
@@ -13,24 +15,26 @@ function run(cmd) {
   }
 }
 
-// Check current git status
-console.log("--- Git Status ---");
-run("git status");
-run("git branch -a");
+// Step 1: Show current state
+console.log("=== Step 1: Current state ===");
+run("git status --short");
+const branch = run("git rev-parse --abbrev-ref HEAD").trim();
+console.log("Current branch:", branch);
+run("git log --oneline -3");
 
-// Check if node_modules is tracked
-console.log("\n--- Checking if node_modules is tracked ---");
-const tracked = run("git ls-files node_modules");
-if (tracked.trim()) {
-  console.log("node_modules IS tracked in git. Removing...");
-  run("git rm -r --cached node_modules");
-  run('git commit -m "fix: remove node_modules from git tracking"');
-} else {
-  console.log("node_modules is NOT tracked. Good.");
-}
+// Step 2: Save current branch name and commit
+const currentCommit = run("git rev-parse HEAD").trim();
+console.log("Current commit:", currentCommit);
 
-// Push the current branch
-console.log("\n--- Pushing to GitHub ---");
-run("git push origin HEAD");
+// Step 3: Fetch latest from origin
+console.log("\n=== Step 2: Fetching origin ===");
+run("git fetch origin");
 
-console.log("\nDone! Check Vercel dashboard for deployment status.");
+// Step 4: Force push current code directly to main
+// This replaces main with our working v0 branch content
+console.log("\n=== Step 3: Pushing to main ===");
+run(`git push origin HEAD:main --force`);
+
+console.log("\n=== DONE ===");
+console.log("Pushed current branch to origin/main.");
+console.log("Vercel should now auto-deploy from main.");
